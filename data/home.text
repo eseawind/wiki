@@ -1,6 +1,6 @@
 % 首页
 % 陈功
-% 2013-08-18
+% 2013-08-20
 
 ## 使用说明
 
@@ -14,8 +14,16 @@
 
 ###git地址
 
-+ 新思路文档平台：<https://svn.baidu.com/app/ecom/asp/trunk/view-ui/conf/template/>
++ 新思路文档平台：<https://github.com/new-thread/wiki>
 
-+ 
+###常用文档
+
++ jQuery：<http://www.css88.com/jqapi-1.9/>
++ CSS：<http://www.css88.com/book/css/>
++ ThinkPHP：<http://doc.thinkphp.cn/>
++ CSS3可视化编辑：<http://www.css88.com/tool/css3Preview/Transform.html>
++ CSS3动画手册：<http://ecd.tencent.com/css3/guide.html>
++ 正则表达式编辑器：<http://regexpal.com/>
++ Markdown在线编辑器：<http://benweet.github.io/stackedit/>
 
 
