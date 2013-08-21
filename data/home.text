@@ -1,0 +1,21 @@
+% 首页
+% 陈功
+% 2013-08-18
+
+## 使用说明
+
++ 文档放置在：`ROOT_PATH`/data目录相应分类的文件夹下
+
++ 图片放置在：`ROOT_PATH`/img文件夹下
+
++ 可下载文件放置在：`ROOT_PATH`/download文件夹下
+
+## 常用链接
+
+###git地址
+
++ 新思路文档平台：<https://svn.baidu.com/app/ecom/asp/trunk/view-ui/conf/template/>
+
++ 
+
+

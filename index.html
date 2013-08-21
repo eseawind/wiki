@@ -1,0 +1,446 @@
+﻿<!DOCTYPE html>
+<html>
+<head><!--STATUS OK-->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+<title>新思路团队文档平台</title>
+<base target="_blank">
+<link rel="stylesheet" type="text/css" href="static/ext/css/ext-all.css" />
+<link rel="stylesheet" type="text/css" href="static/shCoreMidnight.css" />
+<link rel="stylesheet" type="text/css" href="static/adoc.css" />
+<style type="text/css">
+#hi_code,#search{float:right;width:420px;margin-top:5px;}
+#code_url, #search_wd{width:150px;float:left;margin-right:3px;}
+#search{width:230px;}
+.search_list li{list-style:disc;}
+.search_item{margin:3px 5px;padding:3px;cursor:pointer;overflow:hidden;white-space:nowrap;}
+.search_item:hover{background:#eee;}
+.search_item span{margin:0 5px;}
+.search_line_number{color:#416AA3;}
+</style>
+
+<script type="text/javascript" src="static/markdown.js"></script>
+<script type="text/javascript" src="static/ext/ext-base.js"></script>
+<script type="text/javascript" src="static/ext/ext-all.js"></script>
+<script type="text/javascript" src="static/TabCloseMenu.js"></script>
+<script type="text/javascript" src="static/jquery.js"></script>
+<script type="text/javascript" src="static/jquery.ssh.js"></script>
+
+<script type="text/javascript" src="static/shCore.js"></script>
+<script type="text/javascript" src="static/shBrushJScript.js"></script>
+<script type="text/javascript" src="static/shBrushCss.js"></script>
+<script type="text/javascript" src="static/shBrushXml.js"></script>
+
+<script type="text/javascript" src="doc_list.php"></script>
+<script>
+
+//修改w网站标题名称
+var ADOC_TITLE = '新思路团队文档平台';
+//修改网站根目录地址
+var ADOC_URL_PRE = 'http://localhost/wiki/';
+
+//修改网站的首页地址
+var ADOC_HOME_URL = 'data/home.text';
+
+var home_url_loaded = false;
+if(window.location.host == 'db-log02.db01.baidu.com'){ ADOC_URL_PRE = ''; }
+
+var run = function(c){
+    function show(c, key){
+        var code = run[key].replace('$$$', c);
+        var win = window.open('about:blank');
+        win.document.open();
+        win.document.write(code);
+        win.document.close();
+    }
+    var sHash = window.location.hash || '';
+    var key = '';
+    if (sHash.indexOf('api/pc_ui/') != -1) {
+        key = 'pcui';
+    }else if(sHash.indexOf('api/wise_ui/') != -1) {
+        key = 'wiseui';
+    }else {
+        key = 'padui';
+    }
+    var url = {'pcui' : 'test.html', 'wiseui': 'wise_test.html', 'padui': 'pad_test.html'};
+    if(run[key]){
+        show(c, key);
+    }else{
+        $.get(url[key], function(data){
+            run[key] = data;
+            show(c, key);
+        });
+    }
+};
+
+var __adoc = function(text){
+    var h = false;
+    text = text.replace(/\r/g, '').replace(/(^|\n)%([^\n\r]+)/g, function($0, $1, $2){
+        var title = '<h1>' + $2 + '</h1>';
+        var o = '<div>' + $2 + '</div>';
+        if(!h){
+            h = true;
+            return title;
+        }
+        return o;
+    });
+    var x = text.split(/\n/);
+
+	//处理表格
+	var	tb_ing = false,tb_cursor = 0;
+	while(typeof x[tb_cursor] == 'string'){
+		if(x[tb_cursor].match(/^\|[\u0000-\uffff]+\|\s*$/)){
+			if(tb_ing){
+				var s = x[tb_cursor].replace(/\\\|/g, '&#124;').split('|');
+				s.shift();
+				s.pop();
+				$.each(s,function(i){
+					if(s[i].match(/^\*[\u0000-\uffff]+\*$/)){
+						s[i] = '<th>' + s[i].slice(1,-1) + '&nbsp;</th>';
+					}else{
+						s[i] = '<td>' + s[i] + '&nbsp;</td>';
+					}
+				});
+				x[tb_cursor-1] += '<tr>' + s.join('') + '</tr>';
+				x.splice(tb_cursor,1);
+				tb_cursor --;
+			}else{
+				tb_ing = true;
+				x.splice(tb_cursor,0,'<table cellspacing="0">');
+			}
+		}else{
+			if(tb_ing){
+				tb_ing = false;
+				x[tb_cursor-1] += '</table>';
+			}
+		}
+		tb_cursor ++;
+	}
+
+    var start = '<div class="adoc">';
+    var end = '</div>';
+    var html = window.markdown(x.join('\r\n'));
+    html = html.replace(/(<code)(>):::([a-z0-9A-Z]+)/g, '$1 class="adoc-sy adoc-sy-$3"$2');
+    return start + html + end;    
+};
+
+function SetTab(n, file_type){
+	var tab_id = 'x_tab_' + n.id;
+	if(!Tabs.getItem(tab_id)){
+		var tab = Tabs.add({
+			title:n.attributes.text,
+			closable:true,
+			id:tab_id,
+			autoScroll:true
+		});
+		SetTabContent(tab,n.attributes.url, file_type);
+	}
+	Tabs.setActiveTab(tab_id);
+}
+
+//根据tab和url来设置tab内容
+function SetTabContent(tab, url, file_type){
+	tab.adoc_url = url;
+
+    if(url.match(/(gif|jpg|png|bmp)$/i)){
+        setTimeout(function(){
+            c('<img src="' + url + '"/>');
+        }, 100);
+        return;
+    }else if(url.match(/(zip|rar|tar\.gz|tar|gz)$/i)){
+        setTimeout(function(){
+            c('点击链接下载<a href="' + url + '">'+url+'</a>');
+        }, 100);
+        return;
+    }
+
+    if(url.match(/(css|js|html|htm|php)$/i)){
+        file_type = url.slice(url.lastIndexOf('.')+1);
+    }
+
+	//异步请求
+	Ext.Ajax.request({
+		url: /http:/.test(url) ? 'proxy.php?url=' + encodeURIComponent(url) : ADOC_URL_PRE + url,
+		success: function(req){
+			if(!file_type){
+				c(__adoc(req.responseText));
+			}else{
+				var contents = req.responseText.replace(/\r/g, '').split('\n');
+
+				for(var i=0,l=contents.length; i<l; i++){
+					contents[i] = '\t' + contents[i];
+				}
+
+				var txt = '##' + url + '\n\t:::' + file_type + '\n' + contents.join('\n') + '\n\t \n';
+				c(__adoc(txt));
+			}
+		},
+		failure: function(req){
+			c('出现错误了...');
+		}
+	});
+
+	//设置标签页内容
+	function c(x){
+		tab.add({
+            html:'<div class="adoc-wrapper">',
+			border:false,
+			padding:'5',
+			cls:'content'
+		});
+        tab.doLayout();
+		var $tab = $(tab.el.dom).find('.adoc-wrapper').html(x);
+
+		var hs = $tab.find('h1,h2,h3,h4,h5');
+		var div = $('<div class="adoc_index"><h3><span class="adoc_index_left">&lt;&lt;-</span>目录<span class="adoc_index_right">-&gt;&gt;</span></h3><ul></ul></div>');
+		$tab.find('.adoc').append(div);
+		var ul = div.find('ul');
+
+		div.find('h3').click(function(){
+			ul.toggle();
+			div.toggleClass('adoc_index_list_close');
+		});
+
+		hs.each(function(i,v){
+			var li = $('<li></li>').html(v.innerHTML).addClass('adoc_index_' + v.tagName.toLowerCase());
+			li.click(function(){
+				v.scrollIntoView()
+			});
+			ul.append(li);
+		});
+
+		$tab.find('code.adoc-sy').each(function(i, pre){
+			var lang = pre.className.match(/adoc-sy-([a-z]+)/)[1];
+            var $pre = $(pre);
+            var code = $(pre).text();
+            !$.browser.msie && $pre.ssh(lang);
+            $pre.click(function(e){
+                e.ctrlKey && run(code);
+            });
+		});
+		tab.doLayout();
+	}
+}
+
+function parse_search_result(data, wd){
+	var items = data.split('\n');
+	var html = $.map(items, function(item){
+		if(!item) return '';
+		var parts = item.match(/([^:]+):(\d+):([\w\W]+)/);
+		var url = parts[1].replace(/.+\/data\//, '');
+        parts[3] = Ext.util.Format.htmlEncode(parts[3]).replace(wd, '<span style="color:red;">' + wd + '</span>');
+		return ['<li data-url="',url,'" class="search_item"><strong>',url,'</strong>', '<span class="search_line_number">第',parts[2],'行</span>', '<span>',parts[3],'</span></li>'].join('')
+	});
+	return '<h2>搜索结果：</h2><ul class="search_list">' + html.join('') + '</ul>';
+}
+
+function search_keyword(){
+	var wd = $.trim($('#search_wd').val());
+	if(!wd){
+		alert('请输入关键词');		
+		return;
+	}
+
+	$.ajax({
+		url: 'doc_list.php',
+		data: {wd:wd},
+		success: function(data){
+			Tabs.setActiveTab('tab_home_aladdin');
+			var $adoc = $(Home_tab.el.dom).find('.adoc');
+			var html = data ? parse_search_result(data, wd) : '<h3>没有找到结果</h3>';
+			$adoc.html(html);
+			$adoc.find('.search_item').click(function(){
+				var url = this.getAttribute('data-url');
+				SetTab({
+					attributes:{
+						url:'data/' + url,
+						text:url
+					},
+					id: + new Date()
+				});
+			});
+		}
+	});
+}
+
+function makeTreeNodeList(data){
+    if(data instanceof Array){
+        for(var i=0,l=data.length;i<l;i++){
+            if('children' in data[i]){
+                makeTreeNodeList(data[i].children);
+            }else{
+                data[i].leaf = true;
+            }
+        }
+    }
+}
+
+Ext.onReady(function(){
+	DocList = Doc[0].list;
+    for(var i=0;i<Doc.length;i++){
+        makeTreeNodeList(Doc[i].list);
+    }
+
+	//返回Ext的tree数组
+	function getTrees(){
+		var r = [];
+		for(var i=0;i<Doc.length;i++){
+			r.push(new Ext.tree.TreePanel({
+				region:'west',
+				title:Doc[i].name,
+				useArrows: true,
+				autoScroll: true,
+				animate: true,
+				containerScroll: true,
+				border: false,
+				root: new Ext.tree.AsyncTreeNode({
+					expanded: true,
+					text:Doc[i].name,
+					children: Doc[i].list
+				}),
+				listeners: {
+					click: function(n) {
+						n.leaf && SetTab(n);
+					}
+				}
+			}));
+		}
+		return r;
+	}
+
+	//导航布局
+	Nav = {
+		region: 'west',
+		id: 'west-panel',
+		title: '导航',
+		split: true,
+		width: 200,
+		minSize: 175,
+		maxSize: 400,
+		collapsible: true,
+		margins: '0 0 0 5',
+		layout: {
+			type: 'accordion',
+			animate: true
+		},
+		items: getTrees()
+	};
+
+	//标签布局
+	Tabs = new Ext.TabPanel({
+		region: 'center',
+		deferredRender: false,
+		activeTab: 0,
+		enableTabScroll:true,
+		plugins: new Ext.ux.TabCloseMenu()
+	});
+
+	//首页tab，处理后丢弃第一项
+	Home_tab = Tabs.add({
+		title:'文档首页',
+		closable:false,
+		id:'tab_home_aladdin',
+		autoScroll:true
+	});
+	Home_tab.adoc_url = ADOC_HOME_URL;
+	Tabs.setActiveTab('tab_home_aladdin');
+	SetTabContent(Home_tab,ADOC_HOME_URL);
+
+	Tabs.on('tabchange', function(Tabs, tab){
+		if(home_url_loaded){
+			if(tab.adoc_url != ADOC_HOME_URL){
+				window.location.hash = tab.adoc_url.replace(/^data\//,'')
+			}else{
+				window.location.hash = '';
+			}
+		}else{
+			home_url_loaded = true;
+		}
+	});
+
+	//视图
+	Viewport = new Ext.Viewport({
+		layout: 'border',
+		items: [
+		new Ext.BoxComponent({
+			region: 'north',
+			height: 32,
+			autoEl: {
+				tag: 'div',
+				html:['<div id="hi_code">',
+					'<input type="text" id="code_url" class="x-form-text x-form-field" value="http://fe.baidu.com/" />',
+					'</div>',
+					'<div id="search">',
+					'<input type="text" id="search_wd" class="x-form-text x-form-field" value="" />',
+					'</div>',
+					'<h1 style="float:left;margin:0;padding:0 0 0 6px;line-height:32px;font-size:22px;font-family:微软雅黑,黑体;color:#416AA3">' + ADOC_TITLE + '</h1>'
+				].join('')
+			}
+		}),
+		Nav,
+		Tabs
+		]
+	});
+
+	//各个按钮
+	var buttons = ['html','css','javascript'];
+	$.each(buttons, function(i, btn){
+		var code_btn = new Ext.Button({
+			renderTo : 'hi_code',
+			text : '以' + btn + '打开',
+			style:{float:'left',marginLeft:'3px'},
+			listeners:{
+				'click' : function(){
+					var url = $.trim($('#code_url').val());
+					if(!url){
+						alert('请输入url，只能打开fe.baidu.com域名的文本文件');		
+						return;
+					}
+					SetTab({attributes:{url:url,text:url}, id:+new Date}, btn)
+				}
+			}
+		});
+	});
+
+	var search_btn = new Ext.Button({
+		renderTo : 'search',
+		text : '搜索',
+		style:{float:'left',marginLeft:'3px'},
+		listeners:{
+			'click' :  search_keyword
+		}
+	});
+
+	$('#search_wd').keydown(function(e){
+		if(e.keyCode == 13){
+			search_keyword();
+		}
+	});
+
+
+
+	//根据url打开对应的文件
+	var init_file;
+	if(init_file = window.location.href.match(/\#(.+)$/)){
+        var url = 'data/' + init_file[1]; 
+        //SetTab({attributes:{url:url,text:init_file[1]}});
+        var us = url.split('/');
+        var u = us.shift(), node;
+        while(us.length){
+            u += '/' + us.shift();
+            if(node = Nav.items[0].root.findChild('url', u, true)){
+                node.select();
+                node.expand();
+                if(node.leaf){
+                    SetTab(node);
+                }
+            } 
+        }
+    }
+});
+
+</script>
+</head>
+<body>
+<script type="text/javascript">var _bdhmProtocol = (("https:" == document.location.protocol) ? " https://" : " http://");document.write(unescape("%3Cscript src='" + _bdhmProtocol + "hm.baidu.com/h.js%3F8a4bf90edd63356efe3da80315957681' type='text/javascript'%3E%3C/script%3E"));</script>
+</body>
+</html>
